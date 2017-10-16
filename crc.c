@@ -49,12 +49,13 @@ unsigned char* changeToArray(unsigned char* msg, int size1, int pad, int* size2)
 	return arr;
 }
 
-unsigned char* encryptCRC(unsigned char* msg, int size1, int* size2) {
+unsigned char encryptCRC(unsigned char* msg, int size1) {
+	int* size2 = (int*) malloc(sizeof(int));
+	int* sizeR = (int*) malloc(sizeof(int));
 	unsigned char* arr = changeToArray(msg, size1, 8, size2);
-	unsigned char* result = (unsigned char*) malloc(sizeof(char) * size2[0]);
-	for (int i = 0; i < size2[0]-8; i++) {
+	/*for (int i = 0; i < size2[0]-8; i++) {
 		result[i] = arr[i];
-	}
+	}*/
 	int i = 0;
 	while (i < (size2[0] - 8)) {
 		if (arr[i] == 1) {
@@ -64,10 +65,11 @@ unsigned char* encryptCRC(unsigned char* msg, int size1, int* size2) {
 		}
 		i++;
 	}
-	for (int i = size2[0]-8; i < size2[0]; i++) {
+	unsigned char* result = changeToBinary(arr, size2[0], sizeR);
+	/*for (int i = size2[0]-8; i < size2[0]; i++) {
 		result[i] = arr[i];
-	}
-	return result;
+	}*/
+	return result[sizeR[0] - 1];
 }
 
 int decryptCRC(unsigned char* msg, int s) {
@@ -105,7 +107,7 @@ int decryptCRC(unsigned char* msg, int s) {
 	return valid;
 }
 
-int main() {
+/*int main() {
 	int n;
 	FILE *fp1 = fopen("hex1.bin", "w");
 	FILE *fp2 = fopen("bin1.bin", "w");
@@ -117,7 +119,17 @@ int main() {
 		msg[i] = (unsigned char) temp & 0xff;
 	}
 	int* size = (int*) malloc(sizeof(int));
-	unsigned char* result = encryptCRC(msg, n, size);
+	unsigned char crc = encryptCRC(msg, n);
+	unsigned char* result = (unsigned char*) malloc(sizeof(char)*(n+1));
+	for (int i = 0; i < n; i++) {
+		result[i] = msg[i];
+	}
+	result[n] = crc;
+	for (int i = 0; i < n+1; i++) {
+		printf("%02x", result[i]);
+	}
+	printf("\n");
+	
 	
 	for (int i = 0; i < size[0]; i++) {
 		fwrite(&result[i], 1, sizeof(result[i]), fp2);
@@ -129,8 +141,8 @@ int main() {
 		fwrite(&bin[i], 1, sizeof(bin[i]), fp1);
 	}
 	
-	bin[size[0] - 1] ^= 7;
-	bin[size[0] - 2] ^= 1;
+	//bin[size[0] - 1] ^= 7;
+	//bin[size[0] - 2] ^= 1;
 	int check = decryptCRC(bin, size[0]);
 	printf("%d\n",check);
 	
@@ -138,4 +150,4 @@ int main() {
 	fclose(fp2);
 	
 	return 0;
-}
+}*/
