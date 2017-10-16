@@ -73,16 +73,16 @@ unsigned char encryptCRC(unsigned char* msg, int size1) {
 }
 
 int decryptCRC(unsigned char* msg, int s) {
-	FILE *fp1 = fopen("hex2.bin", "w");
+	/*FILE *fp1 = fopen("hex2.bin", "w");
 	FILE *fp2 = fopen("bin2.bin", "w");
 	for (int i = 0; i < s; i++) {
 		fwrite(&msg[i], 1, sizeof(msg[i]), fp1);
-	}
+	}*/
 	int* size = (int*) malloc(sizeof(int));
 	unsigned char* arr = changeToArray(msg, s, 0, size);
-	for (int i = 0; i < size[0]; i++) {
+	/*for (int i = 0; i < size[0]; i++) {
 		fwrite(&arr[i], 1, sizeof(arr[i]), fp2);
-	}
+	}*/
 	unsigned char* result = (unsigned char*) malloc(sizeof(char) * size[0]);
 	for (int i = 0; i < size[0]-8; i++) {
 		result[i] = arr[i];
@@ -102,8 +102,8 @@ int decryptCRC(unsigned char* msg, int s) {
 			valid = 0;
 		}
 	}
-	fclose(fp1);
-	fclose(fp2);
+	/*fclose(fp1);
+	fclose(fp2);*/
 	return valid;
 }
 
