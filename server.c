@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
+#include "crc.h"
 
 #define min(X, Y) (((X) < (Y)) ? (X) : (Y))
 
@@ -28,12 +29,12 @@ void *writeThread(void *vargp)
 		if (endfile == 1 && lfr == fileindex) 
 			break;
 		if (fileindex < lfr) {
-			//sleep(rand() % 1000);
+			usleep(rand() % 2000);
 			fileindex++;
 			printf("Writing to file %d: %c\n", fileindex, buffer[fileindex % buffersize]);
 			fwrite(&buffer[fileindex % buffersize], sizeof(char), 1, fo);
 		}
-		//sleep(10);
+		usleep(10);
 	}
 	fclose(fo);
 	return NULL;
@@ -48,8 +49,8 @@ int main(int argc, char *argv[])
 		int port = strtol(argv[4], '\0', 10);
 		
 		int fd;
-		char ack[7];
-		char packet[9];
+		unsigned char ack[7];
+		unsigned char packet[9];
 		buffer = (char*) malloc(sizeof(char)*buffersize);
 		window = (char*) malloc(sizeof(char)*windowsize);
 		
@@ -86,28 +87,40 @@ int main(int argc, char *argv[])
 			}
 			int packetnum;
 			unsigned char data;
-			memcpy(&packetnum, packet+1, sizeof(int));
-			memcpy(&data, packet+6, sizeof(char));
-			printf("Recieved data %d: %c\n", packetnum, data);
 			
-			if (packetnum == -1 && data == 0) {
-				endfile = 1;
-				printf("End of File\n");
-				break;
-			}
+			if (decryptCRC(packet, 9) == 1) {
+				memcpy(&packetnum, packet+1, sizeof(int));
+				memcpy(&data, packet+6, sizeof(char));
+				printf("Recieved data %d: %c\n", packetnum, data);
 			
-			laf = min(lfr + windowsize, fileindex + buffersize);
-			if (packetnum <= laf && packetnum > lfr && window[packetnum % windowsize] == 0) {
-				window[packetnum % windowsize] = 1;
-				buffer[packetnum % buffersize] = data;
-				while (window[(lfr+1) % windowsize] == 1) {
-					window[(lfr+1) % windowsize] = 0;
-					lfr++;
+				if (packetnum == -1 && data == 0) {
+					endfile = 1;
+					printf("End of File\n");
+					break;
 				}
+			
+				laf = min(lfr + windowsize, fileindex + buffersize);
+				if (packetnum <= laf && packetnum > lfr && window[packetnum % windowsize] == 0) {
+					window[packetnum % windowsize] = 1;
+					buffer[packetnum % buffersize] = data;
+					while (window[(lfr+1) % windowsize] == 1) {
+						window[(lfr+1) % windowsize] = 0;
+						lfr++;
+					}
+				}
+				
+				ack[0] = 0x6;
+				memcpy(ack+1, &lfr, sizeof(int));
+				ack[5] = (char) (buffersize - (lfr - fileindex));
+				ack[6] = encryptCRC(ack, 6);
+				
+				printf("Send ACK %d\n", lfr);
+				sendto(fd, ack, 7, 0, (struct sockaddr*)&clientaddr, sizeof(clientaddr));
 			}
-			memcpy(ack+1, &lfr, sizeof(int));
-			printf("Send ACK %d\n", lfr);
-			sendto(fd, ack, 7, 0, (struct sockaddr*)&clientaddr, sizeof(clientaddr));
+			else {
+				printf("Corrupted packet recieved\n");
+			}
+			printf("\n");
 		}
 
 		close(fd);

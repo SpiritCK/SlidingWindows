@@ -57,11 +57,13 @@ int main(int argc, char *argv[])
 		int lar = -1;
 		int endfile = 0;
 		int lfs;
+		int aws = windowsize;
 		
 		while(1) {
 			if (endfile == 1 && fileindex == lar)
 				break;
 			
+			printf("Current aws: %d\n", aws);
 			while (fileindex - lar < buffersize && endfile == 0) {
 				unsigned char data;
 				int status = fread(&data,sizeof(char),1,fi);
@@ -74,19 +76,20 @@ int main(int argc, char *argv[])
 				}
 			}
 			
+			if (aws == 0) {
+				printf("Sleep for 1 sec\n");
+				usleep(1000);
+				aws = 1; //dummy for checking reciver's aws
+			}
 			lfs = min(fileindex, lar+windowsize);
-			for (int i = lar + 1; i <= lfs; i++) {
+			int lastsending = min(lfs, lar + aws);
+			for (int i = lar + 1; i <= lastsending; i++) {
 				packet[0] = 0x1;
 				memcpy(packet+1, &i, sizeof(int));
 				packet[5] = 0x2;
 				memcpy(packet+6, &buffer[i % buffersize], sizeof(char));
 				packet[7] = 0x3;
 				packet[8] = encryptCRC(packet, 8);
-				printf("Sending packet: ");
-				for (int i = 0; i < 9; i++) {
-					printf("%02x", packet[i]);
-				}
-				printf("\n");
 				
 				if (sendto(fd, packet, 9, 0, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0 ) {
 					perror("sendto failed");
@@ -94,21 +97,32 @@ int main(int argc, char *argv[])
 				}
 				printf("Data %d sent: %c\n", i, buffer[i % buffersize]);
 			}
-			for (int i = lar+1; i <= lfs; i++) {
+			for (int i = lar+1; i <= lastsending; i++) {
 				if (recvfrom(fd, &ack, 7, 0, NULL, 0) >= 0) {
-					int acknum;
-					memcpy(&acknum, ack+1, sizeof(int));
-					printf("Received ACK %d\n", acknum);
-					lar = acknum;
+					if (decryptCRC(ack, 7) == 1) {
+						int acknum;
+						memcpy(&acknum, ack+1, sizeof(int));
+						memcpy(&aws, ack+5, sizeof(char));
+						printf("Received ACK %d, aws %d\n", acknum, aws);
+						lar = acknum;
+					}
+					else {
+						printf("Corrupted ACK recieved");
+					}
 				} else {
 					printf("Timeout\n");
 				}
 			}
+			printf("\n");
 		}
 		int eofindex = -1;
 		unsigned char eofdata = 0;
+		packet[0] = 0x1;
 		memcpy(packet+1, &eofindex, sizeof(int));
+		packet[5] = 0x2;
 		memcpy(packet+6, &eofdata, sizeof(char));
+		packet[7] = 0x3;
+		packet[8] = encryptCRC(packet, 8);
 		sendto(fd, packet, 9, 0, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
 
 		fclose(fi);
