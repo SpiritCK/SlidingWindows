@@ -4,6 +4,7 @@ FLAGS   = -pthread
 # change these to proper directories where each file should be
 SRCDIR   = src
 
+EXE	 := send recv
 SENDER	 := $(SRCDIR)/send.c
 RECIEVER := $(SRCDIR)/recv.c
 CRC	 := $(SRCDIR)/crc.c
@@ -22,6 +23,6 @@ recv: $(RECIEVER) $(CRC) $(INCLUDES)
 	echo "Compiled "$<" successfully!"
 
 .PHONY: remove
-remove: clean
-	$(rm) $(BINDIR)/$(TARGET)
+remove:
+	$(rm) $(EXE)
 	echo "Executable removed!"
