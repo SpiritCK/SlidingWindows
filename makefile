@@ -12,7 +12,10 @@ INCLUDES := $(wildcard $(SRCDIR)/*.h)
 rm       = rm -f
 
 
-all: sendfile recvfile
+all: sendfile recvfile log
+
+log:
+	mkdir -p log
 
 sendfile: $(SENDER) $(CRC) $(INCLUDES)
 	$(CC) $(SENDER) $(CRC) -o sendfile
