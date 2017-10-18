@@ -1,4 +1,4 @@
- #include <sys/types.h>
+//#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -155,7 +155,9 @@ int main(int argc, char *argv[])
 						if (acknum > lar) {
 							sprintf(logmsg, "Moving window from %d to %d", lar, acknum);
 							Log("window", logmsg);
-							lar = acknum;
+							if (acknum > lar) {
+								lar = acknum;
+							}
 						}
 					}
 					else {
@@ -165,6 +167,7 @@ int main(int argc, char *argv[])
 				} else {
 					Log("WARN", "Timeout reached");
 					printf("Timeout\n");
+					break;
 				}
 			}
 			printf("\n");
